@@ -33,9 +33,15 @@ graph = nx.DiGraph()
 
 # Agregar los nodos y las aristas al grafo
 for port_a, ports_b in adjacency_list.items():
-    graph.add_node(port_a)
+    # Obtener el nombre del nodo a partir de su ID
+    node_name = next((node.port_name for node in nodes if node.id == port_a), None)
+    if node_name is not None:
+        graph.add_node(node_name)
     for port_b, port_fee in ports_b:
-        graph.add_edge(port_a, port_b, weight=port_fee)
+        # Obtener el nombre del nodo a partir de su ID
+        target_node_name = next((node.port_name for node in nodes if node.id == port_b), None)
+        if target_node_name is not None:
+            graph.add_edge(node_name, target_node_name, weight=port_fee)
 
 # Obtener la posición de los nodos en el grafo
 pos = nx.spring_layout(graph)
@@ -44,4 +50,4 @@ pos = nx.spring_layout(graph)
 nx.draw(graph, pos, with_labels=True, node_size=500, node_color='lightblue', font_size=10, edge_color='gray', arrows=True)
 
 # Mostrar el grafo
-plt.show()
+#plt.show()
