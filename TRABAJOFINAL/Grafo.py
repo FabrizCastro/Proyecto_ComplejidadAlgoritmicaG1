@@ -1,53 +1,110 @@
-from Nodos import *
+import os
+import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 
-class Graph:
+class Nodo:
+    def __init__(self, id, country, port_name, type, area_local, area_global):
+        self.id = id
+        self.country = country
+        self.port_name = port_name
+        self.type = type
+        self.area_local = area_local
+        self.area_global = area_global
+
+class Conexion:
+    def __init__(self, id_connection, id_port_a, country_a, port, distance, port_fee, id_port_b, country_b, port_b):
+        self.id_connection = id_connection
+        self.id_port_a = id_port_a
+        self.country_a = country_a
+        self.port = port
+        self.distance = distance
+        self.port_fee = port_fee
+        self.id_port_b = id_port_b
+        self.country_b = country_b
+        self.port_b = port_b
+
+class Grafo:
     def __init__(self):
-        self.nodes = []
-        self.connections = []
+        self.nodos = []
+        self.conexiones = []
 
-    def add_node(self, node):
-        self.nodes.append(node)
+    def agregar_nodo(self, id, country, port_name, type, area_local, area_global):
+        nodo = Nodo(id, country, port_name, type, area_local, area_global)
+        self.nodos.append(nodo)
 
-    def add_connection(self, connection):
-        self.connections.append(connection)
+    def agregar_conexion(self, id_connection, id_port_a, country_a, port, distance, port_fee, id_port_b, country_b, port_b):
+        conexion = Conexion(id_connection, id_port_a, country_a, port, distance, port_fee, id_port_b, country_b, port_b)
+        self.conexiones.append(conexion)
 
-# Crear la lista de adyacencia
-adjacency_list = {}
+    def obtener_nodo_por_id(self, id):
+        for nodo in self.nodos:
+            if nodo.id == id:
+                return nodo
+        return None
 
-# Iterar sobre las conexiones y construir la lista de adyacencia
-for connection in connections:
-    port_a = connection.port_a
-    port_b = connection.port_b
-    port_fee = connection.port_fee
+    def obtener_conexiones_de_nodo(self, id):
+        conexiones = []
+        for conexion in self.conexiones:
+            if conexion.id_port_a == id:
+                conexiones.append(conexion)
+        return conexiones
     
-    # Agregar Port B a la lista de adyacencia de Port A
-    if port_a in adjacency_list:
-        adjacency_list[port_a].append((port_b, port_fee))
-    else:
-        adjacency_list[port_a] = [(port_b, port_fee)]
+    def construir_grafo(self):
+        G = nx.DiGraph()  # Cambio a un grafo dirigido
+        info_grafo = {'nodes': {}, 'edges': {}}
 
-# Crear un objeto de tipo DiGraph (grafo dirigido)
-graph = nx.DiGraph()
+        for nodo in self.nodos:
+            G.add_node(nodo.port_name)
+            info_grafo['nodes'][nodo.port_name] = {
+                'country': nodo.country,
+                'area_local': nodo.area_local,
+                'area_global': nodo.area_global
+            }
 
-# Agregar los nodos y las aristas al grafo
-for port_a, ports_b in adjacency_list.items():
-    # Obtener el nombre del nodo a partir de su ID
-    node_name = next((node.port_name for node in nodes if node.id == port_a), None)
-    if node_name is not None:
-        graph.add_node(node_name)
-    for port_b, port_fee in ports_b:
-        # Obtener el nombre del nodo a partir de su ID
-        target_node_name = next((node.port_name for node in nodes if node.id == port_b), None)
-        if target_node_name is not None:
-            graph.add_edge(node_name, target_node_name, weight=port_fee)
+        for conexion in self.conexiones:
+            G.add_edge(conexion.port, conexion.port_b)
+            info_grafo['edges'][(conexion.port, conexion.port_b)] = {
+                'distance': conexion.distance,
+                'port_fee': conexion.port_fee
+            }
 
-# Obtener la posición de los nodos en el grafo
-pos = nx.spring_layout(graph)
+        return G, info_grafo
 
-# Dibujar los nodos y las aristas
-nx.draw(graph, pos, with_labels=True, node_size=500, node_color='lightblue', font_size=10, edge_color='gray', arrows=True)
+# Obtén la ruta del directorio actual del script
+dir_actual = os.path.dirname(os.path.abspath(__file__))
 
-# Mostrar el grafo
-#plt.show()
+# Construye la ruta relativa del archivo Excel
+ruta_excel = os.path.join(dir_actual, 'Port_Data.xlsx')
+
+# Lee el archivo Excel
+df = pd.read_excel(ruta_excel, sheet_name='Port_Data')
+df_connections = pd.read_excel(ruta_excel, sheet_name='Connections')
+
+# Crea una instancia del grafo
+grafo = Grafo()
+
+# Itera sobre los nodos
+for i in range(len(df)):
+    id_nodo = df['Id'][i]
+    country = df['Country'][i]
+    port_name = df['Port Name'][i]
+    tipo = df['Type'][i]
+    area_local = df['Area Local'][i]
+    area_global = df['Area Global'][i]
+
+    grafo.agregar_nodo(id_nodo, country, port_name, tipo, area_local, area_global)
+
+# Itera sobre las conexiones
+for i in range(len(df_connections)):
+    id_connection = df_connections['ID_Connection'][i]
+    id_port_a = df_connections['Id_Port_A'][i]
+    country_a = df_connections['Country'][i]
+    port = df_connections['Port'][i]
+    distance = df_connections['Distance (nm)'][i]
+    port_fee = df_connections['Port Fee($)/h'][i]
+    id_port_b = df_connections['Id_Port_B'][i]
+    country_b = df_connections['Country_B'][i]
+    port_b = df_connections['Port_B'][i]
+
+    grafo.agregar_conexion(id_connection, id_port_a, country_a, port, distance, port_fee, id_port_b, country_b, port_b)
+
